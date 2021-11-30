@@ -1,0 +1,178 @@
+1- creamos nuestro proyecto
+=> laravel new crud-laravel8+vue3
+
+2- creamos la base de datos en phpMyAdmin con el nombre que está en el archivo app=>providers=>appServicePdoviders.php 
+usamos no necesario para el esquema => use Illuminate\Support\Facades\Schema y en la funcion boot 
+ponemos el siguente código => Schema::defaultStringLength(191);
+
+3- ejecutamos el comando para migrar las tablas necesarias para base de datos
+=> php artisan migrate
+
+4- creamos nuestra tabla para hacer el crud tabla "create_productos_table"
+=> php artisan make:migration productos, afecta la carpeta database->migrations->create_productos_table.php
+
+5- Abrimos el archivo que acabamos de crear y colocamos en el esquema las propiedades que tendrá nuestra tabla
+=>  $table->string('descripcion'); $table->text('precio'); en este caso agregamos "descripcion y precio"
+
+6- Procedemos a crear nuestro modelo con el siguiente comando
+=> php artisan make:model Producto 
+
+7- En el archivo que se acaba de crear app/models/producto.php escribimos la siguiente linea de codigo en la clase debajo de HasFactory 
+=> protected $fillable = ['descripcion', 'precio'];
+
+8- ejecutamos las migraciones nuevamente con el siguiente comando
+=> php artisan migrate 
+
+9- creamos el controlador que hara todas las operaciones con el siguiente comando
+=> php artisan make:controller ProductosController --resource 
+
+10- en el archivo creado app/http/controllers/productosController.php requerimos el modelo, guardamos en una variable la consulta del modelo, retornamos una respuesta
+tipo json de la variable, todo esto en el metodo index.
+
+11- en el metodo store declaramos una variable y le pasamos el modelo con la propiedad create que recibe dos argumentos, el primero es la request y el segundo es el metodo http post()
+haremos un return con la respuesta de la variable como formato json.
+
+12- en el metodo show pasamos por parametro el Producto y la variable $producto, luego hacemos un return de tipo json del $producto
+
+13- en el metodo update pasamos por parametro el modelo Producto y el $producto como variable, el Request y el $request, guardamos en la variable $$producto la siguiente linea fill($request->post())->save();
+y hacemos un return de un return de la respuesta tipo json del $producto.
+
+14- en el metodo Destroy le pasamos el modelo y la variable (Producto $producto) como parametro, pasamos la variable $producto conla propiedad delete y regresamos la response de tipo json
+=> $producto->delete();
+return response()->json(['mensaje'=>'Producto eliminado']);
+
+15- procedemos a crear las rutas app/routes/web.php
+Route::get('{any}', function(){
+    return view('app');
+});
+
+16- procedemos a crear las rutas en el archivo app/routes/api.php y le decimos que solo queremos contruir las rutas para los metodos que utilizamos 
+=> Route::resource('blog', App\Http\Controllers\ProductoController::class)->only(['index', 'store', 'update', 'destroy']);
+
+17- creamos un archivo nuevo, esta plantilla nos servirá para llamar a los archivos css y los script que necesitemos adicional del div que llamara al vue3 App/resources/view/app.blade.php
+
+18- procedemos a crear la carpeta componentes dentro de la cual crearemos otra carpeta llamada productos en donde estarán todos los archivo necesarios para el crud de los productos.
+en la carpeta componentes creamos los archivos mostrar.vue, editar.vue y App.vue que es el componente principal.
+
+19- procedemos a crear las rutas para vue para esto creamos un archivo en resource/js/routes.js
+importamos todas las vistas dentro de sus respoectivas variables ej:
+ => const Home = ()=> import('./componentes/Home.vue') y procedemos a exportar las rutas ej
+ export const routes[
+     {name: 'home', path: '/', component: Home}
+ ]
+
+
+20- en el archivo resources/js/app.js importaremos vue importaremos la vista principal de app.vue e importaremos axios, el router y todoas las configuraciones necesarias para hacer las operaciones
+
+21- luego de eso nos vamos a webpack.mix.js para poner al final del codigo .vue();
+
+22- creamos la plantilla html para App.vue 
+
+23- creamos la plantilla html para contacto.vue
+
+24- resgresamos al archivo Mostrar.vue, cramos toda la plantilla HTML para mostrar la información y hacemos un v-for="producto in productos" :key="productos.id"
+posterior a eso mostramos la data en la tabla {{producto.precio}}
+
+25- en la parte de los scipts el código irá de esta manera
+<script>
+export default {
+  name: "productos",
+  data() {
+    return {
+      productos: [],
+    };
+  },
+
+  created() {
+    this.mostrarProductos();
+  },
+
+  methods: {
+    async mostrarProductos() {
+      try {
+        this.axios.get("/api/productos").then((res) => {
+          this.productos = res.data;
+        });
+      } catch (error) {
+        console.log("error en el proceso de llamar la información", error);
+      }
+    },
+  }
+  </script>
+
+26- en el archivo crear.vue tenemos la siguiente logica en el script
+=>
+<script>
+export default {
+  name: "crear",
+  data() {
+    return {
+      producto: {
+        descripcion: "",
+        precio: "",
+      },
+    };
+  },
+
+  methods: {
+    async crear() {
+      try {
+        await this.axios.post("/api/producto", this.producto).then((res) => {
+          this.$router.push({ name: "mostrar" });
+        });
+      } catch (error) {
+        console.log("Error creando el registro ", error);
+      }
+    },
+  },
+};
+</script>
+
+26- en nuestro archivo editar tendremos la siguiente logica en el script
+=>
+<script>
+export default {
+  name: "editar",
+
+  data() {
+    return {
+      producto: {
+        descripcion: "",
+        precio: "",
+      },
+    };
+  },
+
+  mounted() {
+    this.mostrarProducto();
+  },
+
+  methods: {
+    async mostrarProducto() {
+      try {
+        await this.axios
+          .get(`/api/producto/${this.$route.params.id}`)
+          .then((res) => {
+            const { descripcion, precio } = res.data;
+            this.producto.descripcion = descripcion;
+            this.producto.precio = precio;
+          });
+      } catch (error) {
+        console.log("Error al llamar al registro para editar");
+      }
+    },
+
+    async actualizar() {
+      try {
+        await this.axios
+          .put(`/api/producto/${this.$route.params.id}`, this.producto)
+          .then((res) => {
+            this.$router.push({ name: "mostrar" });
+          });
+      } catch (error) {
+        console.log("Error al editar el registro");
+      }
+    },
+  },
+};
+</script>
